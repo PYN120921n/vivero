@@ -15,24 +15,66 @@ export function formatCurrency(value: number): string {
   return currencyFormatter.format(value ?? 0);
 }
 
-/** "12 de agosto de 2026" */
-export function formatLongDate(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(`${date}T12:00:00`) : date;
-  return new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" }).format(d);
+/**
+ * Convierte a Date de forma segura para ambos casos que llegan de Supabase:
+ *
+ * - Columnas `date`:
+ *   "2026-08-16"
+ *   Se anclan a mediodía local para evitar que la fecha se recorra
+ *   un día por diferencias de huso horario.
+ *
+ * - Columnas `timestamptz`:
+ *   "2026-08-16T14:00:07+00:00"
+ *   Ya contienen hora y zona horaria, por lo que se parsean directamente.
+ *
+ * Esto evita errores como:
+ * RangeError: Invalid time value
+ */
+function toDate(date: string | Date): Date {
+  if (date instanceof Date) {
+    return date;
+  }
+
+  return /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? new Date(`${date}T12:00:00`)
+    : new Date(date);
 }
 
-/** "Mérida, Yucatán, a 12 de agosto de 2026" — replica el formato de las cotizaciones originales */
-export function formatQuoteDateLine(date: string | Date, city: string): string {
+/** "12 de agosto de 2026" */
+export function formatLongDate(date: string | Date): string {
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(toDate(date));
+}
+
+/**
+ * "Mérida, Yucatán, a 12 de agosto de 2026"
+ *
+ * Replica el formato de las cotizaciones originales.
+ */
+export function formatQuoteDateLine(
+  date: string | Date,
+  city: string
+): string {
   return `${city}, a ${formatLongDate(date)}`;
 }
 
+/** "12/08/2026" */
 export function formatShortDate(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(`${date}T12:00:00`) : date;
-  return new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(toDate(date));
 }
 
 export interface QuoteTotalsInput {
-  items: Array<{ unit_price: number; quantity: number }>;
+  items: Array<{
+    unit_price: number;
+    quantity: number;
+  }>;
   taxRate: number;
   discountType: DiscountType;
   discountValue: number;
@@ -47,9 +89,12 @@ export interface QuoteTotals {
 }
 
 /**
- * Calcula subtotal → descuento → impuesto → total. Se usa tanto en el
- * formulario (para la vista previa en vivo) como al guardar la cotización,
- * para que los números nunca queden desincronizados.
+ * Calcula:
+ *
+ * subtotal → descuento → impuesto → total
+ *
+ * Se utiliza tanto en el formulario (para la vista previa en vivo)
+ * como al guardar la cotización, para mantener los valores sincronizados.
  */
 export function calculateQuoteTotals({
   items,
@@ -58,14 +103,19 @@ export function calculateQuoteTotals({
   discountValue,
   shippingCost,
 }: QuoteTotalsInput): QuoteTotals {
-  const subtotal = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.unit_price * item.quantity,
+    0
+  );
 
   let discountAmount = 0;
+
   if (discountType === "percentage") {
     discountAmount = subtotal * (discountValue / 100);
   } else if (discountType === "fixed") {
     discountAmount = discountValue;
   }
+
   discountAmount = Math.min(discountAmount, subtotal);
 
   const taxableBase = subtotal - discountAmount;
