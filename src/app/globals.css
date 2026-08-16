@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf8f3;
+  --foreground: #1b342a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
+
+  /* Verde bosque — identidad principal, inspirada en el dosel de la selva
+     yucateca que la empresa reforesta. */
+  --color-forest-50: #f1f6f3;
+  --color-forest-100: #ddeae2;
+  --color-forest-200: #bcd6c7;
+  --color-forest-300: #8fbba3;
+  --color-forest-400: #5f9a7e;
+  --color-forest-500: #3f7d61;
+  --color-forest-600: #2e6349;
+  --color-forest-700: #264f3c;
+  --color-forest-800: #1f4032;
+  --color-forest-900: #1b342a;
+  --color-forest-950: #0e1d17;
+
+  /* Ámbar/maíz — acento cálido, evita el terracota genérico. */
+  --color-clay-50: #fbf6e9;
+  --color-clay-100: #f5e9c8;
+  --color-clay-200: #ebd293;
+  --color-clay-300: #dfb85f;
+  --color-clay-400: #cfa13d;
+  --color-clay-500: #b98826;
+  --color-clay-600: #9a6d1d;
+  --color-clay-700: #7a551a;
+  --color-clay-800: #5f4318;
+  --color-clay-900: #4c3716;
+}
+
+body {
+  background: var(--color-stone-100);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+}
+
+@layer base {
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display), serif;
+  }
+}
+
+/* Estilos exclusivos para la vista de impresión de respaldo (Ctrl+P) del
+   detalle de una cotización. El PDF real se genera en el servidor con
+   @react-pdf/renderer; esto es solo un plan B rápido en pantalla. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
